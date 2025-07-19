@@ -1,0 +1,36 @@
+{} Telegram Bot with Account Creation (Auto Password + Delete by User ID)
+
+const TelegramBot = require('node-telegram-bot-api'); const fs = require('fs'); const path = './users.json';
+
+const token = '7979847471:AAH_FRt5idhKww_jOWDiYjdRVc1fKCcJMmQ'; const bot = new TelegramBot(token, { polling: true }); const ADMIN_ID = 8042961678; // Ganti dengan ID Telegram anda
+
+// Generate password secara rawak function generatePassword(length = 10) { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; let pass = ''; for (let i = 0; i < length; i++) { pass += chars.charAt(Math.floor(Math.random() * chars.length)); } return pass; }
+
+// Load users function loadUsers() { if (!fs.existsSync(path)) return {}; const raw = fs.readFileSync(path); return JSON.parse(raw); }
+
+// Save users function saveUsers(users) { fs.writeFileSync(path, JSON.stringify(users, null, 2)); }
+
+// Handle /create command (username user_id) bot.onText(//create (\w{3,}) (\d+)/, (msg, match) => { if (msg.from.id !== ADMIN_ID) return; const username = match[1]; const userId = parseInt(match[2]); const users = loadUsers();
+
+if (users[username]) { bot.sendMessage(msg.chat.id, ❌ Username "${username}" sudah wujud.); return; }
+
+const password = generatePassword(); users[username] = { password, created_by: msg.from.id, created_at: new Date().toISOString() }; saveUsers(users);
+
+const message = ✅ Akun Anda Telah Dibuat! 🔑 Username: <code>${username}</code> 🔐 Password: <code>${password}</code> 🌐 Login: https://your-site.com;
+
+bot.sendMessage(msg.chat.id, ✅ Akun "${username}" berjaya dibuat.); bot.sendMessage(userId, message, { parse_mode: 'HTML' }); });
+
+// Handle /delete command bot.onText(//delete (\w{3,})/, (msg, match) => { if (msg.from.id !== ADMIN_ID) return; const username = match[1]; const users = loadUsers();
+
+if (!users[username]) { bot.sendMessage(msg.chat.id, ❌ Username "${username}" tidak wujud.); return; }
+
+delete users[username]; saveUsers(users);
+
+bot.sendMessage(msg.chat.id, ✅ Akaun "${username}" telah dipadam.); });
+
+// Help command bot.onText(//start|/help/, (msg) => { if (msg.from.id !== ADMIN_ID) return; const helpText = `👨‍💻 Admin Panel:
+
+/create username user_id - Buat akaun (password auto) /delete username - Padam akaun
+
+Contoh: /create herysuhu 8042961678 /delete herysuhu`; bot.sendMessage(msg.chat.id, helpText); });
+
